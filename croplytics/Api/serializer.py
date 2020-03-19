@@ -36,12 +36,14 @@ class UserContactsSerialier(serializers.ModelSerializer):
     class Meta:
         model = UserContacts
         fields = ['id', 'user_mobile']
+        extra_kwargs = {'id': {'read_only': False}}
 
 
 class UserAddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserAddress
         fields = ['id', 'address', 'country', 'state', 'district']
+        extra_kwargs = {'id': {'read_only': False}}
 
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -65,11 +67,14 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
 
     def update(self, instance, validated_data):
         UserContacts_data = validated_data.pop('UserContacts')
+        UserContacts_id = UserContacts_data[0]['id']
         UserAddress_data = validated_data.pop('UserAddress')
+        UserAddress_id = UserAddress_data[0]['id']
 
-        UserContacts = (instance.UserContacts).all()
+        UserContacts = (instance.UserContacts).filter(id=UserContacts_id)
         UserContacts = list(UserContacts)
-        UserAddress = (instance.UserAddress).all()
+
+        UserAddress = (instance.UserAddress).filter(id=UserAddress_id)
         UserAddress = list(UserAddress)
 
         instance.username = validated_data.get('username', instance.username)
