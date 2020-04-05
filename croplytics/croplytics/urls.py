@@ -23,4 +23,5 @@ urlpatterns = [
     path('api/',include(router.urls),name = 'api'),
     path(r'api/v1/auth/login/',LoginView.as_view()),
     path(r'api/v1/auth/logout/',LogoutView.as_view()),
+    path('ss/',include('Myuser.urls')),
 ]
