@@ -1,9 +1,11 @@
 from rest_framework import serializers
-from Myuser.models import UserAddress, UserContacts
+from Myuser.models import UserAddress, UserContacts,Profiles,UserProfiles
 from django.contrib.auth.models import User
 from rest_framework import exceptions
 from django.contrib.auth import authenticate
-
+import json
+from .utils import send_response
+from .errorCode import *
 
 # class UserSerializer(serializers.ModelSerializer):
 
@@ -36,6 +38,7 @@ class UserContactsSerialier(serializers.ModelSerializer):
     class Meta:
         model = UserContacts
         fields = ['id', 'user_mobile']
+        # extra_kwargs = {'id': {'read_only': False}}
 
 
 class UserAddressSerializer(serializers.ModelSerializer):
@@ -61,12 +64,16 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
             UserContacts.objects.create(user_id=user, **usercontact)
         for useraddress in UserAddress_data:
             UserAddress.objects.create(user_id=user, **useraddress)
+        profile = Profiles.objects.get(profilename='Farmer')
+        UserProfiles.objects.create(userid=user, profileid=profile, isdeleted=False)
         return user
 
     def update(self, instance, validated_data):
         UserContacts_data = validated_data.pop('UserContacts')
+        # UserContacts_id = UserContacts_data[0]['id']
         UserAddress_data = validated_data.pop('UserAddress')
 
+        # UserContacts = (instance.UserContacts).filter(id=UserContacts_id)
         UserContacts = (instance.UserContacts).all()
         UserContacts = list(UserContacts)
         UserAddress = (instance.UserAddress).all()
@@ -159,12 +166,49 @@ class FarmerLoginSerializer(serializers.Serializer):
                 if (user.is_active):
                     data['user'] = user
                 else:
-                    msg = "User is deactivated"
+                    response = send_response(result='', errorcode=USER_DEACTIVATED, errormessage='User is not active!',
+                                             statuscode=200)
+                    msg = json.dumps(response)
                     raise exceptions.ValidationError(msg)
             else:
-                msg = 'Unable to login with given credenstial'
+                response = send_response(result='', errorcode=USER_LOGIN_CREDENTIAL_WRONG,
+                                         errormessage='Authentication error occurred. Please try again!',
+                                         statuscode=200)
+                msg = json.dumps(response)
                 raise exceptions.ValidationError(msg)
         else:
-            msg = 'must provide username and password both'
+            response = send_response(result='', errorcode=USERNAME_PASSWORD_EMPTY,
+                                     errormessage='UserName and Password should not empty!', statuscode=200)
+            msg = json.dumps(response)
+            raise exceptions.ValidationError(msg)
+        return data
+
+class OtpSerializer(serializers.Serializer):
+    mobile = serializers.CharField()
+    messageType = serializers.CharField()
+    projectId = serializers.IntegerField()
+
+
+    def validate(self,data):
+        mobile = data.get('mobile','')
+        messageType = data.get('messageType','')
+        con = UserContacts.objects.filter(user_mobile=mobile)
+        if(con and messageType=='forgotPassword'):
+            pass
+        elif(con!=mobile and messageType=='forgotPassword'):
+            response = send_response(result='',errorcode=MOBILE_DOES_NOT_EXISTS,errormessage='Mobile Number Does not exists!',statuscode=200)
+            msg = json.dumps(response)
+            raise exceptions.ValidationError(msg)
+        elif(con and messageType=='resetPassword'):
+            pass
+        elif(con!=mobile and messageType=='resetPassword'):
+            response = send_response(result='',errorcode=MOBILE_DOES_NOT_EXISTS,errormessage='Mobile Number Does not exists!',statuscode=200)
+            msg = json.dumps(response)
+            raise exceptions.ValidationError(msg)
+        elif(con!=mobile and messageType=='registration'):
+            pass
+        elif(con and messageType=='registration'):
+            response = send_response(result='',errorcode=MOBILE_DOES_NOT_EXISTS,errormessage='Mobile Number already exists!',statuscode=200)
+            msg = json.dumps(response)
             raise exceptions.ValidationError(msg)
         return data
