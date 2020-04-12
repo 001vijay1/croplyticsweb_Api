@@ -16,7 +16,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path,include
 from croplytics.router import router
-from Api.viewsets import LogoutView,LoginView
+from Api.viewsets import LogoutView,LoginView,ChangePasswordView,OtpView,ForgotPasswordView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -24,4 +24,9 @@ urlpatterns = [
     path(r'api/v1/auth/login/',LoginView.as_view()),
     path(r'api/v1/auth/logout/',LogoutView.as_view()),
     path('ss/',include('Myuser.urls')),
+    path('rest-auth/', include('rest_auth.urls')),
+    path('accounts/',include('django.contrib.auth.urls')),
+    path('forgot-password/',ForgotPasswordView.as_view()),
+    path('reset-password/',ChangePasswordView.as_view()),
+    path('otp/',OtpView.as_view()),
 ]

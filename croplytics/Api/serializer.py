@@ -6,6 +6,8 @@ from django.contrib.auth import authenticate
 import json
 from .utils import send_response
 from .errorCode import *
+from django.contrib.auth import password_validation
+from django.contrib.auth.hashers import make_password,check_password
 
 # class UserSerializer(serializers.ModelSerializer):
 
@@ -33,12 +35,13 @@ from .errorCode import *
 # def create(self, validated_data):
 #     validated_data['password'] = make_password(validated_data.get('password'))
 #     return super(UserSerializer, self).create(validated_data)
-
+#
 class UserContactsSerialier(serializers.ModelSerializer):
     class Meta:
         model = UserContacts
         fields = ['id', 'user_mobile']
-
+#
+#
 class UserAddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserAddress
@@ -46,108 +49,70 @@ class UserAddressSerializer(serializers.ModelSerializer):
         extra_kwargs = {'id': {'read_only': False}}
 
 
-class UserSerializer(serializers.HyperlinkedModelSerializer):
-    UserContacts = UserContactsSerialier(many=True)
-    UserAddress = UserAddressSerializer(many=True)
+class UserSerializer(serializers.ModelSerializer):
+    mobile = UserContactsSerialier().fields['user_mobile']
+    address = UserAddressSerializer().fields['address']
+    country = UserAddressSerializer().fields['country']
+    state = UserAddressSerializer().fields['state']
+    district = UserAddressSerializer().fields['district']
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'password', 'first_name', 'last_name', 'is_active', 'UserContacts', 'UserAddress']
+        fields = ['id', 'username', 'password', 'first_name', 'last_name',
+                  'is_active', 'mobile','address','country','state','district']
         extra_kwargs = {'is_active': {'read_only': True}}
 
     def create(self, validated_data):
-        UserContacts_data = validated_data.pop('UserContacts')
-        UserAddress_data = validated_data.pop('UserAddress')
+        mobile_data = validated_data.pop('mobile')
+        address_data = validated_data.pop('address')
+        country_data = validated_data.pop('country')
+        state_data = validated_data.pop('state')
+        district_data = validated_data.pop('district')
         user = User.objects.create_user(**validated_data)
-        for usercontact in UserContacts_data:
-            UserContacts.objects.create(user_id=user, **usercontact)
-        for useraddress in UserAddress_data:
-            UserAddress.objects.create(user_id=user, **useraddress)
+        UserContacts.objects.create(user_id=user, user_mobile=mobile_data)
+        UserAddress.objects.create(user_id=user, address=address_data, country=country_data, state=state_data,
+                                   district=district_data)
         profile = Profiles.objects.get(profilename='Farmer')
         UserProfiles.objects.create(userid=user, profileid=profile, isdeleted=False)
         return user
 
+    # def create(self, validated_data):
+    #     UserContacts_data = validated_data.pop('UserContacts')
+    #     UserAddress_data = validated_data.pop('UserAddress')
+    #     user = User.objects.create_user(**validated_data)
+    #     for usercontact in UserContacts_data:
+    #         UserContacts.objects.create(user_id=user, **usercontact)
+    #     for useraddress in UserAddress_data:
+    #         UserAddress.objects.create(user_id=user, **useraddress)
+    #     profile = Profiles.objects.get(profilename='Farmer')
+    #     UserProfiles.objects.create(userid=user, profileid=profile, isdeleted=False)
+    #     return user
+    #
+    #
     def update(self, instance, validated_data):
-        UserContacts_data = validated_data.pop('UserContacts')
-        UserAddress_data = validated_data.pop('UserAddress')
-       
-        UserContacts = (instance.UserContacts).all()
-        UserContacts = list(UserContacts)
-        UserAddress = (instance.UserAddress).all()
-        UserAddress = list(UserAddress)
+        userid = validated_data.pop('username')
+        mobile_data = validated_data.pop('mobile')
+        address_data = validated_data.pop('address')
+        country_data = validated_data.pop('country')
+        state_data = validated_data.pop('state')
+        district_data = validated_data.pop('district')
 
         instance.username = validated_data.get('username', instance.username)
         instance.password = validated_data.get('password', instance.password)
         instance.first_name = validated_data.get('first_name', instance.first_name)
         instance.last_name = validated_data.get('last_name', instance.last_name)
         instance.save()
-        for usr_contact in UserContacts_data:
-            user_contact = UserContacts.pop(0)
-            user_contact.user_mobile = usr_contact.get('user_mobile', user_contact.user_mobile)
-            user_contact.save()
-        for usr_address in UserAddress_data:
-            user_address = UserAddress.pop(0)
-            user_address.address = usr_address.get('address', user_address.address)
-            user_address.country = usr_address.get('country', user_address.country)
-            user_address.state = usr_address.get('state', user_address.state)
-            user_address.district = usr_address.get('district', user_address.district)
-            user_address.save()
 
+        user_contact = UserContacts.objects.get(user_id=userid)
+        user_contact.user_mobile = mobile_data
+        user_contact.save()
+        user_address = UserAddress.objects.get(user_id=userid)
+        user_address.address = address_data
+        user_address.country = country_data
+        user_address.state = state_data
+        user_address.district = district_data
+        user_address.save()
         return instance
-
-    # def update(self, instance, validated_data):
-    #     user_data = validated_data.pop('user')
-    #     print(user_data)
-    #     user_contact_data = validated_data.pop('user_contact')
-    #     print(user_contact_data)
-    #     # users = (instance.user).filter(first_name=user_data['first_name'])
-    #     # users = list(users)
-    #     # user_contacts = (instance.user_contact).filter(user_mobile=)
-    #     # user_contacts = list(user_contacts)
-
-    #     instance.address = validated_data.get('address',instance.address)
-    #     instance.country = validated_data.get('country',instance.country)
-    #     instance.state = validated_data.get('state', instance.state)
-    #     instance.district = validated_data.get('district', instance.district)
-    #     instance.save()
-
-    #     # for usr_data in user_data:
-    #     #     user = users.pop(0)
-    #     #     user.username = usr_data.get('username', user.username)
-    #     #     user.password = usr_data.get('password', user.password)
-    #     #     user.first_name = usr_data.get('first_name', user.first_name)
-    #     #     user.last_name = usr_data.get('last_name',user.last_name)
-    #     #     user.save()
-    #     # for usr_contact_data in user_contacts_data:
-    #     #     user_contact = user_contacts.pop(0)
-    #     #     usr_data.user_mobile = usr_contact_data.get('user_mobile',usr_contact_data.user_mobile)
-    #     #     user_contact.save()
-    #     # return instance
-    #     keep_user_data = []
-    #     keep_user_contact_data = []
-    #     for usr_data in user_data:
-    #         if('username' in usr_data.keys()):
-    #             if(User.objects.filter(username=usr_data['username']).exists()):
-    #                 c = User.objects.get(id=usr_data['id'])
-    #                 c.username = usr_data.get('username',c.username)
-    #                 c.password = usr_data.get('password',c.password)
-    #                 c.first_name = usr_data.get('first_name',c.first_name)
-    #                 c.last_name = usr_data.get('last_name',c.last_name)
-    #                 c.save()
-    #                 keep_user_data.append(c)
-    #             else:
-    #                 print("not updated.........")
-    #     for usr_contact_data in user_contact_data:
-    #         if('user_mobile' in usr_contact_data.keys()):
-    #             if(UserContacts.objects.filter(user_mobile=usr_contact_data['user_mobile']).exist()):
-    #                 c = UserContacts.objects.get(id=usr_contact_data['id'])
-    #                 c.user_mobile = usr_contact_data.get('user_mobile',c.user_mobile)
-    #                 c.save()
-    #                 keep_user_contact_data.append(c)
-    #             else:
-    #                 print('not updated')
-    #     return instance
-
 
 class FarmerLoginSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -157,7 +122,7 @@ class FarmerLoginSerializer(serializers.Serializer):
         username = data.get('username', '')
         password = data.get('password', '')
 
-        if (username and password):
+        if (username  and password):
             user = authenticate(username=username, password=password)
             if (user):
                 if (user.is_active):
@@ -167,12 +132,27 @@ class FarmerLoginSerializer(serializers.Serializer):
                                              statuscode=200)
                     msg = json.dumps(response)
                     raise exceptions.ValidationError(msg)
-            else:
-                response = send_response(result='', errorcode=USER_LOGIN_CREDENTIAL_WRONG,
-                                         errormessage='Authentication error occurred. Please try again!',
-                                         statuscode=200)
-                msg = json.dumps(response)
-                raise exceptions.ValidationError(msg)
+            elif(username  and password):
+                try:
+                    contact = UserContacts.objects.get(user_mobile=username)
+                    if(contact):
+                        userid = contact.user_id
+                        user = authenticate(username=userid, password=password)
+                        if (user):
+                            if (user.is_active):
+                                data['user'] = user
+                            else:
+                                response = send_response(result='', errorcode=USER_DEACTIVATED,
+                                                         errormessage='User is not active!',
+                                                         statuscode=200)
+                                msg = json.dumps(response)
+                                raise exceptions.ValidationError(msg)
+                except:
+                    response = send_response(result='', errorcode=USER_LOGIN_CREDENTIAL_WRONG,
+                                             errormessage='Authentication error occurred. Please try again!',
+                                             statuscode=200)
+                    msg = json.dumps(response)
+                    raise exceptions.ValidationError(msg)
         else:
             response = send_response(result='', errorcode=USERNAME_PASSWORD_EMPTY,
                                      errormessage='UserName and Password should not empty!', statuscode=200)
@@ -192,20 +172,80 @@ class OtpSerializer(serializers.Serializer):
         con = UserContacts.objects.filter(user_mobile=mobile)
         if(con and messageType=='forgotPassword'):
             pass
-        elif(con!=mobile and messageType=='forgotPassword'):
+        elif(not con and messageType=='forgotPassword'):
             response = send_response(result='',errorcode=MOBILE_DOES_NOT_EXISTS,errormessage='Mobile Number Does not exists!',statuscode=200)
             msg = json.dumps(response)
             raise exceptions.ValidationError(msg)
         elif(con and messageType=='resetPassword'):
             pass
-        elif(con!=mobile and messageType=='resetPassword'):
+        elif(not con and messageType=='resetPassword'):
             response = send_response(result='',errorcode=MOBILE_DOES_NOT_EXISTS,errormessage='Mobile Number Does not exists!',statuscode=200)
             msg = json.dumps(response)
             raise exceptions.ValidationError(msg)
-        elif(con!=mobile and messageType=='registration'):
+        elif(not con and messageType=='registration'):
             pass
         elif(con and messageType=='registration'):
             response = send_response(result='',errorcode=MOBILE_DOES_NOT_EXISTS,errormessage='Mobile Number already exists!',statuscode=200)
             msg = json.dumps(response)
             raise exceptions.ValidationError(msg)
         return data
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    userid = serializers.CharField(max_length=128, write_only=True, required=True)
+    new_password = serializers.CharField(max_length=128, write_only=True, required=True)
+    confirm_password = serializers.CharField(max_length=128, write_only=True, required=True)
+
+    def validate_userid(self, value):
+        try:
+            user = User.objects.get(username=value)
+            if(user):
+                pass
+        except:
+            msg = 'Your userid does not match any existing user. Please enter it again.'
+            response = send_response(result='', errorcode=USERID_NOT_MATCH, errormessage=msg, statuscode=200)
+            raise exceptions.ValidationError(response)
+        return value
+
+    def validate(self, data):
+        if data['new_password'] != data['confirm_password']:
+            msg = "Your password and confirmation password do not match."
+            response = send_response(result='',errorcode=PASSWORD_NOT_MATCH,errormessage=msg,statuscode=200)
+            raise exceptions.ValidationError(response)
+        password_validation.validate_password(data['new_password'])
+        return data
+
+    def save(self, **kwargs):
+        userid = self.validated_data['userid']
+        password = self.validated_data['password']
+        user = User.objects.get(username=userid)
+        user.set_password(password)
+        user.save()
+        return user
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    userid = serializers.CharField(max_length=128, write_only=True, required=True)
+    new_password = serializers.CharField(max_length=128, write_only=True, required=True)
+
+    def validate_userid(self, value):
+        try:
+            user = User.objects.get(username=value)
+            if(user):
+                pass
+        except:
+            msg = 'Your userid does not match any existing user. Please enter it again.'
+            response = send_response(result='',errorcode=USERID_NOT_MATCH,errormessage=msg,statuscode=200)
+            raise exceptions.ValidationError(response)
+        return value
+
+    def validate(self, data):
+        password_validation.validate_password(data['new_password'])
+        return data
+
+    def save(self, **kwargs):
+        userid = self.validated_data['userid']
+        password = self.validated_data['new_password']
+        user = User.objects.get(username=userid)
+        user.set_password(password)
+        user.save()
+        return user
