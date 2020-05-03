@@ -42,11 +42,16 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'rest_auth',
+    'corsheaders',
+]
+CORS_ORIGIN_WHITELIST = [
+    "http://localhost:3000"
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware', # new
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -82,6 +87,14 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'croplytics',
+        'USER': 'root1',
+        'PASSWORD': 'root@123',
+        'HOST': 'localhost',
+        'PORT': ''
+    },
+    'user_db': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'self_practice',
         'USER': 'root1',
         'PASSWORD': 'root@123',
         'HOST': 'localhost',

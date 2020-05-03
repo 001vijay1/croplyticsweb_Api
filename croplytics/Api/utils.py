@@ -1,9 +1,7 @@
 import json
 import requests
 from django.db import connection
-from django.contrib.auth import authenticate
-from rest_framework import exceptions
-from .errorCode import *
+from rest_framework.views import exception_handler
 
 def send_response(result, errorcode, errormessage, statuscode):
     body = {
@@ -16,7 +14,7 @@ def send_response(result, errorcode, errormessage, statuscode):
     #     'body':json.dumps(body, default=str)
     # }
     return body
-
+#
 # def user_securityPoint(userid):
 #     mycursor = connection.cursor()
 #     query = 'CALL sp_get_security_points(%s)'
@@ -25,3 +23,16 @@ def send_response(result, errorcode, errormessage, statuscode):
 #     for s_p_intuple in mycursor:
 #         user_security_point += str(s_p_intuple[0]) + ","
 #     return user_security_point
+# def user_details(uid):
+#     data = {}
+#     mycursor = connection.cursor()
+#     query = "call sp_user_details(%s)"
+#     try:
+#         mycursor.execute(query,[uid])
+#         rows = mycursor.fetchone()
+#         columns = [col[0] for col in mycursor.description]
+#         for index, item in enumerate(rows):
+#             data[columns[index]] = rows[index]
+#         return data
+#     except:
+#         print('user_details not found')
